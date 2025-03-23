@@ -114,14 +114,14 @@ class $modify(MyEditorUI, EditorUI) {
 
 	void freeUpSomeSpace() {
 		auto bigMenu = getChildByID("editor-buttons-menu");
-		auto topRight = bigMenu->getPosition() + bigMenu->getScaledContentSize() / 2.f;
+		auto topRight = bigMenu->getPosition() + ccp(bigMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), bigMenu->getScaledContentHeight() * (1 - bigMenu->getAnchorPoint().y));
 		bigMenu->setScale(.88f);
-		bigMenu->setPosition(topRight - bigMenu->getScaledContentSize() / 2.f);
+		bigMenu->setPosition(topRight - ccp(bigMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), bigMenu->getScaledContentHeight() * (1 - bigMenu->getAnchorPoint().y)));
 
 		auto smallMenu = getChildByID("layer-menu");
-		auto right = smallMenu->getPosition() + ccp(smallMenu->getScaledContentWidth() / 2.f, 0);
+		auto right = smallMenu->getPosition() + ccp(smallMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), 0);
 		smallMenu->setScale(.88f);
-		smallMenu->setPosition(right - ccp(smallMenu->getScaledContentWidth() / 2.f, -17));
+		smallMenu->setPosition(right - ccp(smallMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), -17));
 
 		auto lockSpr = getChildByID("layer-locked-sprite");
 		lockSpr->setPosition(lockSpr->getPosition() + ccp(2, 17));
