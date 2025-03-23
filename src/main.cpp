@@ -1,7 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <cvolton.level-id-api/include/EditorIDs.hpp>
 #include <Geode/modify/EditorUI.hpp>
-#include <geode.custom-keybinds/include/Keybinds.hpp>
 #include <unordered_map>
 #include <matjson.hpp>
 #include <matjson/std.hpp>
@@ -12,14 +11,17 @@ using namespace geode::prelude;
 #include "layerlistPopup.hpp"
 
 // keybinds
-$execute {
-    keybinds::BindManager::get()->registerBindable({
-        "open-list"_spr, "Open layer list",
-        "Open the list of the used editor layers",
-        { keybinds::Keybind::create(KEY_G, keybinds::Modifier::Control) },
-        "Named Editor Layers"
-    });
-}
+#ifndef GEODE_IS_MOBILE
+	#include <geode.custom-keybinds/include/Keybinds.hpp>
+	$execute {
+		keybinds::BindManager::get()->registerBindable({
+			"open-list"_spr, "Open layer list",
+			"Open the list of the used editor layers",
+			{ keybinds::Keybind::create(KEY_G, keybinds::Modifier::Control) },
+			"Named Editor Layers"
+		});
+	}
+#endif // GEODE_IS_MOBILE
 
 // support for BetterEdit scale factor
 inline float getBetterEditInterfaceScale() {
@@ -134,14 +136,16 @@ class $modify(MyEditorUI, EditorUI) {
 	}
 
 	void initKeybinds() {
-		this->template addEventListener<keybinds::InvokeBindFilter>([this](keybinds::InvokeBindEvent* event) {
-			if (event->isDown()) {
-				if (CCScene::get()->getChildByID("set-name-popup"_spr) == nullptr && CCScene::get()->getChildByID("layer-list-popup"_spr) == nullptr) {
-					onLayerListButton(nullptr);
+		#ifndef GEODE_IS_MOBILE
+			this->template addEventListener<keybinds::InvokeBindFilter>([this](keybinds::InvokeBindEvent* event) {
+				if (event->isDown()) {
+					if (CCScene::get()->getChildByID("set-name-popup"_spr) == nullptr && CCScene::get()->getChildByID("layer-list-popup"_spr) == nullptr) {
+						onLayerListButton(nullptr);
+					}
 				}
-			}
-			return ListenerResult::Propagate;
-		}, "open-list"_spr);
+				return ListenerResult::Propagate;
+			}, "open-list"_spr);
+		#endif // GEODE_IS_MOBILE
 	}
 
 	bool init(LevelEditorLayer* editor) {
