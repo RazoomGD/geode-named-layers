@@ -23,17 +23,6 @@ using namespace geode::prelude;
 	}
 #endif // GEODE_IS_MOBILE
 
-// support for BetterEdit scale factor
-inline float getBetterEditInterfaceScale() {
-	if (Loader::get()->isModInstalled("hjfod.betteredit")) {
-		auto betterEdit = Loader::get()->getInstalledMod("hjfod.betteredit");
-		if (betterEdit->isEnabled() && betterEdit->hasSetting("scale-factor")) {
-			float scale = betterEdit->getSettingValue<double>("scale-factor");
-			if (scale > 0.1) return scale;
-		}
-	}
-	return 1;
-}
 
 class $modify(MyEditorUI, EditorUI) {
 	struct Fields {
@@ -56,7 +45,7 @@ class $modify(MyEditorUI, EditorUI) {
 			for (const auto& [key, value] : layerNames) {
 				jsonVal[std::to_string(key)] = value;
 			}
-			Mod::get()->setSavedValue(std::to_string(levelId), jsonVal.dump());
+			Mod::get()->setSavedValue(std::to_string(levelId), jsonVal.dump(matjson::NO_INDENTATION));
 		}
 	};
 
@@ -72,7 +61,8 @@ class $modify(MyEditorUI, EditorUI) {
 		menu->setContentSize({95,18});
 		menu->setAnchorPoint({1,1});
 		addChild(menu, 6);
-		menu->setPosition(layerMenu->getPosition() + ccp(0,-2) + ccp(layerMenu->getScaledContentWidth() / 2.f, -layerMenu->getScaledContentHeight() / 2.f));
+		menu->setPosition(layerMenu->getPosition() + ccp(0,-2) + ccp(layerMenu->getScaledContentWidth() * (1 - layerMenu->getAnchorPoint().x), -layerMenu->getScaledContentHeight() * layerMenu->getAnchorPoint().y));
+		menu->setScale(getChildByID("editor-buttons-menu")->getScale());
 		
 		auto btnSpr = CCSprite::createWithSpriteFrameName("GJ_plus2Btn_001.png");
 		btnSpr->setScale(0.7);
@@ -104,10 +94,12 @@ class $modify(MyEditorUI, EditorUI) {
 	void checkLayer(float) {
 		static int layer = -500;
 		if (m_editorLayer->m_currentLayer == layer) return;
-
 		// layer changed
 		layer = m_editorLayer->m_currentLayer;
-		// log::debug("layer changed {}", layer);
+		updateLayer(layer);
+	}
+
+	void updateLayer(int layer) {
 		if (layer == -1) { // all
 			updateLabel("");
 		} else {
@@ -155,13 +147,14 @@ class $modify(MyEditorUI, EditorUI) {
 		m_fields->levelId = EditorIDs::getID(editor->m_level);
 		m_fields->loadMap();
 		
-		if (getBetterEditInterfaceScale() > 0.85) {
+		if (getChildByID("editor-buttons-menu")->getScale() > 0.85) {
 			freeUpSomeSpace();
 		}
 		
 		setupLayerMenu();
 		initKeybinds();
 		
+		updateLayer(editor->m_currentLayer);
 		schedule(schedule_selector(MyEditorUI::checkLayer), 0);
 
 		return true;
@@ -188,9 +181,30 @@ class $modify(MyEditorUI, EditorUI) {
 	}
 
 	void onLayerListButton(CCObject*) {
-		std::vector<int> layersToInclude = {1, 2, 3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+		auto editor = LevelEditorLayer::get();
+		auto allObjects = editor->m_objects;
+		std::unordered_map<int, int> layerCountMap;
+		// layers with objects
+		for (auto* obj : CCArrayExt<GameObject*>(allObjects)) {
+			auto it = layerCountMap.find(obj->m_editorLayer);
+			if (it != layerCountMap.end()) (*it).second++;
+			else layerCountMap.insert({obj->m_editorLayer, 1});
+
+			if (obj->m_editorLayer2 != obj->m_editorLayer) {
+				it = layerCountMap.find(obj->m_editorLayer2);
+				if (it != layerCountMap.end()) (*it).second++;
+				else layerCountMap.insert({obj->m_editorLayer2, 1});						
+			}
+		}
+		// layers that are named
+		for (auto const &layer : m_fields->layerNames) {
+			layerCountMap.insert({layer.first, 0});
+		}
+		// current layer
+		layerCountMap.insert({std::max((int)editor->m_currentLayer, 0), 0});
+		
 		LayerListPopup::create({
-			std::move(layersToInclude),
+			std::move(layerCountMap),
 			&m_fields->layerNames,
 			m_editorLayer->m_currentLayer,
 			[this] (int layer, const char* name) {nameUpdated(layer, name);}

@@ -1,5 +1,5 @@
 struct LayersInfo {
-    std::vector<int> m_layersToInclude;
+    std::unordered_map<int, int> m_layersToInclude;
     std::unordered_map<int, std::string> *m_layerNames;
     int m_currentLayer;
     std::function<void(int layer, const char* name)> m_updateCallback;
@@ -46,21 +46,27 @@ protected:
         border->setContentSize(scroll->getContentSize());
         border->setPosition(scroll->getContentSize() / 2);
 
-        int count = 0;
-        for (int layer : m_layersInfo.m_layersToInclude) {
-            auto cell = CCLayerColor::create(count % 2 ? ccc4(161,88,44,255) : ccc4(194,114,62,255), cellWidth, cellHeight);
+        std::vector<std::pair<int, int>> layers(m_layersInfo.m_layersToInclude.begin(), m_layersInfo.m_layersToInclude.end());
+        std::sort(layers.begin(), layers.end(), [](std::pair<int, int> a, std::pair<int, int> b){return a.first < b.first;});
+
+        auto editor = LevelEditorLayer::get();
+        bool isLockingEnabled = editor->m_layerLockingEnabled;
+
+        int btnCount = 0;
+        for (auto [layer, objCount] : layers) {
+            auto cell = CCLayerColor::create(btnCount % 2 ? ccc4(161,88,44,255) : ccc4(194,114,62,255), cellWidth, cellHeight);
 
             auto indexLab = CCLabelBMFont::create(fmt::format("{}.", layer).c_str(), "bigFont.fnt");
-            indexLab->setScale(0.5);
+            indexLab->limitLabelWidth(25, 0.5, 0);
             indexLab->setAnchorPoint({0,0.5});
             cell->addChildAtPosition(indexLab, Anchor::Left, ccp(10, 0));
 
             auto it = m_layersInfo.m_layerNames->find(layer);
             auto name = (it != m_layersInfo.m_layerNames->end()) ? (*it).second : std::string("");
             auto nameLab = CCLabelBMFont::create((name == "") ? "-" : name.c_str(), "bigFont.fnt");
-            nameLab->setScale(0.5);
             nameLab->setAnchorPoint({0,0.5});
-            cell->addChildAtPosition(nameLab, Anchor::Left, ccp(55, 0));
+            nameLab->limitLabelWidth(150, 0.5, 0);
+            cell->addChildAtPosition(nameLab, Anchor::Left, ccp(45, 0));
 
             auto menu = CCMenu::create();
             cell->addChild(menu);
@@ -78,13 +84,27 @@ protected:
             auto plusBtn = CCMenuItemSpriteExtra::create(plusSpr, this, menu_selector(LayerListPopup::onPlusButton));
             plusBtn->setTag(layer);
             plusBtn->setUserObject(nameLab);
-            menu->addChildAtPosition(plusBtn, Anchor::Right, ccp(-55, 0));
+            menu->addChildAtPosition(plusBtn, Anchor::Right, ccp(-51, 0));
+
+            if (isLockingEnabled) {
+                auto lockBtn = CCMenuItemToggler::createWithSize("GJ_lockGray_001.png", "GJ_lock_001.png", this, menu_selector(LayerListPopup::onLockButton), 0.55f);
+                lockBtn->setTag(layer);
+                static_cast<CCSprite*>(lockBtn->m_offButton->getNormalImage())->setOpacity(90);
+                menu->addChildAtPosition(lockBtn, Anchor::Right, ccp(-73, 0));
+                lockBtn->toggle(editor->isLayerLocked(layer));
+            }
+
+            auto countLab = CCLabelBMFont::create(fmt::format("Obj: {}", objCount).c_str(), "chatFont.fnt");
+            countLab->setAnchorPoint({0,0.5});
+            countLab->limitLabelWidth(40, 0.6, 0);
+            countLab->setColor(ccc3(86,48,14));
+            cell->addChildAtPosition(countLab, Anchor::Right, ccp(-135, 0));
 
             scroll->m_contentLayer->addChild(cell);
-            count++;
+            btnCount++;
         }
 
-        scroll->m_contentLayer->setContentHeight(cellHeight * count);
+        scroll->m_contentLayer->setContentHeight(std::max(cellHeight * btnCount, scroll->getContentHeight()));
         scroll->m_contentLayer->setLayout(ColumnLayout::create()->setAutoScale(false)->setAxisReverse(true)->setGap(0)->setCrossAxisLineAlignment(AxisAlignment::Start));
         scroll->scrollToTop();
         
@@ -114,8 +134,21 @@ protected:
                 if (layer == -1) return;
                 m_layersInfo.m_updateCallback(layer, name);
                 lab->setString((*name == '\0') ? "-" : name);
+                lab->limitLabelWidth(150, 0.5, 0);
             }
         })->show();
+    }
+
+    void onLockButton(CCObject* sender) {
+        auto editor = LevelEditorLayer::get();
+        int layer = sender->getTag();
+        if (editor->m_currentLayer == layer) {
+            EditorUI::get()->onLockLayer(nullptr);
+        } else {
+            if (layer < 10000) {
+                editor->m_lockedLayers[layer] = !editor->m_lockedLayers[layer];
+            }
+        }
     }
 
 
@@ -137,7 +170,8 @@ public:
     void onInfoBtn(CCObject*) {
         createQuickPopup("Help", 
             "This is a list of <cl>named layers</c> and <cl>unnamed layers with objects</c>.\n"
-            "Use the <cy>plus button</c> to change layer name.\n"
+            "Use the <cy>lock</c> button to lock/unlock the layer.\n"
+            "Use the <cy>plus</c> button to change layer name.\n"
             "Use the <cy>go to layer</c> button to jump to that layer.\n"
             "<cg>You can also change the name of the layer by clicking on "
             "its text directly in the editor!</c>", "ok", nullptr, nullptr, true);

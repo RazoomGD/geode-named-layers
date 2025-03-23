@@ -10,12 +10,12 @@
 	"name": "Named Editor Layers",
 	"version": "v1.0.0",
 	"developer": "RaZooM",
-	"description": "xcykjlm",
+	"description": "Adds names for the editor layers",
 
 	"tags": ["editor", "enhancement", "utility", "interface"],
 
 	"links": {
-		"source": "https://github.com/RazoomGD/geode-object-groups",
+		"source": "https://github.com/RazoomGD/geode-named-layers",
 		"community": "https://discord.gg/wcWvtKHP8n"
 	},
 
