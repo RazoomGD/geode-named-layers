@@ -8,7 +8,7 @@
 using namespace geode::prelude;
 
 #include "setNamePopup.hpp"
-#include "layerlistPopup.hpp"
+#include "layerListPopup.hpp"
 
 // keybinds
 #ifndef GEODE_IS_MOBILE
