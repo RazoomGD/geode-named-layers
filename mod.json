@@ -1,0 +1,36 @@
+{
+	"geode": "4.2.0",
+	"gd": {
+		"win": "2.2074",
+		"android": "2.2074",
+		"mac": "2.2074",
+		"ios": "2.2074"
+	},
+	"id": "razoom.named_editor_layers",
+	"name": "Named Editor Layers",
+	"version": "v1.0.0",
+	"developer": "RaZooM",
+	"description": "xcykjlm",
+
+	"tags": ["editor", "enhancement", "utility", "interface"],
+
+	"links": {
+		"source": "https://github.com/RazoomGD/geode-object-groups",
+		"community": "https://discord.gg/wcWvtKHP8n"
+	},
+
+	"dependencies": {
+		"geode.node-ids": {
+			"importance": "required",
+			"version": ">=1.17.0"
+		},
+		"cvolton.level-id-api": {
+			"importance": "required",
+			"version": ">=1.0.0"
+		},
+		"geode.custom-keybinds": {
+			"importance": "required",
+			"version": ">=v1.10.0"
+		}
+	}
+}
