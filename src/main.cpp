@@ -115,16 +115,19 @@ class $modify(MyEditorUI, EditorUI) {
 	void freeUpSomeSpace() {
 		auto bigMenu = getChildByID("editor-buttons-menu");
 		auto topRight = bigMenu->getPosition() + ccp(bigMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), bigMenu->getScaledContentHeight() * (1 - bigMenu->getAnchorPoint().y));
+		float bottomOld = bigMenu->getPositionY() - bigMenu->getScaledContentHeight() * bigMenu->getAnchorPoint().y;
 		bigMenu->setScale(.88f);
 		bigMenu->setPosition(topRight - ccp(bigMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), bigMenu->getScaledContentHeight() * (1 - bigMenu->getAnchorPoint().y)));
+		float bottomNew = bigMenu->getPositionY() - bigMenu->getScaledContentHeight() * bigMenu->getAnchorPoint().y;
+		float yDiff = bottomNew - bottomOld;
 
 		auto smallMenu = getChildByID("layer-menu");
 		auto right = smallMenu->getPosition() + ccp(smallMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), 0);
 		smallMenu->setScale(.88f);
-		smallMenu->setPosition(right - ccp(smallMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), -17));
+		smallMenu->setPosition(right - ccp(smallMenu->getScaledContentWidth() * (1 - bigMenu->getAnchorPoint().x), -yDiff));
 
 		auto lockSpr = getChildByID("layer-locked-sprite");
-		lockSpr->setPosition(lockSpr->getPosition() + ccp(2, 17));
+		lockSpr->setPosition(lockSpr->getPosition() + ccp(2, yDiff));
 	}
 
 	void initKeybinds() {
