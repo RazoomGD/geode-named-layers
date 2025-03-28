@@ -193,7 +193,7 @@ class $modify(MyEditorUI, EditorUI) {
 			if (it != layerCountMap.end()) (*it).second++;
 			else layerCountMap.insert({obj->m_editorLayer, 1});
 
-			if (obj->m_editorLayer2 != obj->m_editorLayer) {
+			if (obj->m_editorLayer2 != obj->m_editorLayer && obj->m_editorLayer2 > 0) {
 				it = layerCountMap.find(obj->m_editorLayer2);
 				if (it != layerCountMap.end()) (*it).second++;
 				else layerCountMap.insert({obj->m_editorLayer2, 1});						
