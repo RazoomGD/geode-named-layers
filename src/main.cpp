@@ -11,7 +11,7 @@ using namespace geode::prelude;
 #include "layerListPopup.hpp"
 
 // keybinds
-#ifndef GEODE_IS_MOBILE
+#ifdef GEODE_IS_DESKTOP
 	#include <geode.custom-keybinds/include/Keybinds.hpp>
 	$execute {
 		keybinds::BindManager::get()->registerBindable({
@@ -21,7 +21,7 @@ using namespace geode::prelude;
 			"Named Editor Layers"
 		});
 	}
-#endif // GEODE_IS_MOBILE
+#endif // GEODE_IS_DESKTOP
 
 
 class $modify(MyEditorUI, EditorUI) {
@@ -131,7 +131,7 @@ class $modify(MyEditorUI, EditorUI) {
 	}
 
 	void initKeybinds() {
-		#ifndef GEODE_IS_MOBILE
+		#ifdef GEODE_IS_DESKTOP
 			this->template addEventListener<keybinds::InvokeBindFilter>([this](keybinds::InvokeBindEvent* event) {
 				if (event->isDown()) {
 					if (CCScene::get()->getChildByID("set-name-popup"_spr) == nullptr && CCScene::get()->getChildByID("layer-list-popup"_spr) == nullptr) {
@@ -140,7 +140,7 @@ class $modify(MyEditorUI, EditorUI) {
 				}
 				return ListenerResult::Propagate;
 			}, "open-list"_spr);
-		#endif // GEODE_IS_MOBILE
+		#endif // GEODE_IS_DESKTOP
 	}
 
 	bool init(LevelEditorLayer* editor) {
