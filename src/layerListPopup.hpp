@@ -173,8 +173,8 @@ public:
             "Use the <cy>lock</c> button to lock/unlock the layer.\n"
             "Use the <cy>plus</c> button to change layer name.\n"
             "Use the <cy>go to layer</c> button to jump to that layer.\n"
-            "<cg>You can also change the name of the layer by clicking on "
-            "its text directly in the editor!</c>", "ok", nullptr, nullptr, true);
+            "<cg>You can also change the name of the layer by CLICKING ON "
+            "ITS TEXT directly in the editor!</c>", "ok", nullptr, nullptr, true);
     }
 
 };
