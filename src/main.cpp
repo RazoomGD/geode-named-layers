@@ -286,7 +286,10 @@ class $modify(MyEditorUI, EditorUI) {
 
 		if (!mySaveObj) {
 			if (!create) return;
+			short tmp = editor->m_currentLayer;
+			editor->m_currentLayer = -1;
 			mySaveObj = static_cast<TextGameObject*>(editor->createObject(914, ccp(0,0), true));
+			editor->m_currentLayer = tmp;
 			editor->removeObjectFromSection(mySaveObj);
 			mySaveObj->updateTextObject("{}", false);
 		}
@@ -302,7 +305,7 @@ class $modify(MyEditorUI, EditorUI) {
 		} 
 		
 		if (action == 2) { // load
-			auto text = mySaveObj->m_text;
+			auto text = std::string(mySaveObj->m_text);
 			auto len = std::strlen("config\n"_spr);
 			if (text.size() > len) {
 				if (auto res = matjson::parse(text.substr(len))) {
