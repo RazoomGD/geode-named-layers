@@ -4,6 +4,7 @@ Mod that makes using the editor layers more convenient:
 
 - Adds <cy>names</c> for the layers independent for each level
 - Adds a <cy>preview list</c> of all used layers
+- Adds the ability to <cy>select the layer by name</c> from 'Edit Group' menu
 
 ***
 

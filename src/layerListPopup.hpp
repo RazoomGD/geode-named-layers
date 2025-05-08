@@ -5,6 +5,7 @@ struct LayersInfo {
     std::function<void(int layer, const char* name)> m_updateCallback;
 };
 
+
 class LayerListPopup : public Popup<LayersInfo> {
 private:
     const float m_width = 380.f;
@@ -32,6 +33,7 @@ protected:
         return true;
     }
 
+
     void setupScrollLayer() {
         const float cellHeight = 25;
         const float cellWidth = m_width - 40;
@@ -39,12 +41,6 @@ protected:
         auto scroll = ScrollLayer::create({m_width - 40, m_height - 55});
         m_mainLayer->addChild(scroll);
         scroll->setPosition({20,20});
-
-        auto border = ListBorders::create();
-        border->setSpriteFrames("GJ_commentTop_001.png", "GJ_commentSide_001.png");
-        scroll->addChild(border, 3);
-        border->setContentSize(scroll->getContentSize());
-        border->setPosition(scroll->getContentSize() / 2);
 
         std::vector<std::pair<int, int>> layers(m_layersInfo.m_layersToInclude.begin(), m_layersInfo.m_layersToInclude.end());
         std::sort(layers.begin(), layers.end(), [](std::pair<int, int> a, std::pair<int, int> b){return a.first < b.first;});
@@ -105,15 +101,24 @@ protected:
         }
 
         scroll->m_contentLayer->setContentHeight(std::max(cellHeight * btnCount, scroll->getContentHeight()));
-        scroll->m_contentLayer->setLayout(ColumnLayout::create()->setAutoScale(false)->setAxisReverse(true)->setGap(0)->setCrossAxisLineAlignment(AxisAlignment::Start));
+        scroll->m_contentLayer->setLayout(ColumnLayout::create()->setAutoScale(false)->setAxisReverse(true)->setGap(0)->setCrossAxisLineAlignment(AxisAlignment::Start)->setAxisAlignment(AxisAlignment::End));
         scroll->scrollToTop();
         
-        auto bar = Scrollbar::create(scroll);
-        bar->setPosition(scroll->getPosition() + scroll->getContentSize() + ccp(3,0));
-        bar->setAnchorPoint({0,1});
-        bar->setScaleX(1.15);
-        m_mainLayer->addChild(bar, 5);
+        if (cellHeight * btnCount > scroll->getContentHeight()) {
+            auto bar = Scrollbar::create(scroll);
+            bar->setPosition(scroll->getPosition() + scroll->getContentSize() + ccp(3,0));
+            bar->setAnchorPoint({0,1});
+            bar->setScaleX(1.15);
+            m_mainLayer->addChild(bar, 5);
+        }
+
+        auto border = ListBorders::create();
+        border->setSpriteFrames("GJ_commentTop_001.png", "GJ_commentSide_001.png");
+        scroll->addChild(border, 3);
+        border->setContentSize(scroll->getContentSize());
+        border->setPosition(scroll->getContentSize() / 2);
     }
+
 
     void onGoToLayerButton(CCObject* sender) {
         // in a strange way...
@@ -122,6 +127,7 @@ protected:
         (arrowBtn->m_pListener->*(arrowBtn->m_pfnSelector))(arrowBtn); // call the selector
         onClose(nullptr);
     }
+
 
     void onPlusButton(CCObject* sender) {
         auto lab = static_cast<CCLabelBMFont*>(static_cast<CCNode*>(sender)->getUserObject());
@@ -138,6 +144,7 @@ protected:
             }
         })->show();
     }
+
 
     void onLockButton(CCObject* sender) {
         auto editor = LevelEditorLayer::get();
@@ -163,9 +170,11 @@ public:
         return nullptr;
     }
 
+
     void onClose(CCObject* sender) override {
         Popup::onClose(sender);
     }
+
 
     void onInfoBtn(CCObject*) {
         createQuickPopup("Help", 
@@ -174,8 +183,8 @@ public:
             "Use the <cy>plus</c> button to change layer name.\n"
             "Use the <cy>go to layer</c> button to jump to that layer.\n"
             "<cg>You can also change the name of the layer by CLICKING ON "
-            "ITS TEXT directly in the editor!</c>", "ok", nullptr, nullptr, true);
+            "ITS TEXT directly in the editor!</c>", "ok", nullptr, nullptr, true
+        );
     }
-
 };
     

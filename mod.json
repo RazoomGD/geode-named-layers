@@ -1,5 +1,5 @@
 {
-	"geode": "4.3.1",
+	"geode": "4.4.0",
 	"gd": {
 		"win": "2.2074",
 		"android": "2.2074",
@@ -8,7 +8,7 @@
 	},
 	"id": "razoom.named_editor_layers",
 	"name": "Named Editor Layers",
-	"version": "v1.0.2",
+	"version": "v1.1.0",
 	"developer": "RaZooM",
 	"description": "Adds names for the editor layers",
 
@@ -31,7 +31,22 @@
 		"geode.custom-keybinds": {
 			"importance": "required",
 			"version": ">=v1.10.0",
-			"platforms": ["win", "macos", "mac-intel", "mac-arm"]
+			"platforms": ["win", "mac", "mac-intel", "mac-arm"]
+		}
+	},
+
+	"settings": {
+		"in-edit-groups-menu": {
+			"name": "Layer names in 'Edit Group' menu",
+			"description": "Show layer names in 'Edit Group' menu. You can also <cj>click</c> on the name text to select the layer",
+			"type": "bool",
+			"default": true
+		},
+		"use-save-object": {
+			"name": "Use special 'save object'",
+			"description": "Store layer names in a special text object in the level. This allows you to share layer names when sharing/publishing a level\n(this text object is located far to the left in editor an updated automatically with level save)",
+			"type": "bool",
+			"default": false
 		}
 	}
 }
