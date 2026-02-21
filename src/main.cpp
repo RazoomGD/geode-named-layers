@@ -343,7 +343,9 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 		}
 		// with BetterEdit
 		auto str = m_fields->betterEdit.inputL1->getString();
-		if (str.empty() || !std::all_of(str.begin(), str.end(), ::isdigit)) return -1;
+		for (int i = 0; i < str.size(); i++) {
+			if (str[i] < '0' || str[i] > '9') return -1;
+		}
 		return utils::numFromString<int>(str).unwrapOr(-1);
 	}
 	
@@ -354,7 +356,9 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 		}
 		// with BetterEdit
 		auto str = m_fields->betterEdit.inputL2->getString();
-		if (str.empty() || !std::all_of(str.begin(), str.end(), ::isdigit)) return -1;
+		for (int i = 0; i < str.size(); i++) {
+			if (str[i] < '0' || str[i] > '9') return -1;
+		}
 		return utils::numFromString<int>(str).unwrapOr(-1);
 	}
 
