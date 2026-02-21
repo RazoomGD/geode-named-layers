@@ -6,7 +6,7 @@ struct LayersInfoReduced {
 };
 
 
-class SelectPopup : public Popup<LayersInfoReduced> {
+class SelectPopup : public Popup {
 private:
     const float m_width = 300.f;
     const float m_height = 280.f;
@@ -14,7 +14,12 @@ private:
     LayersInfoReduced m_layersInfo;
 
 protected:
-    bool setup(LayersInfoReduced layerInfo) override {
+
+    bool init(LayersInfoReduced layerInfo) {
+
+        if (!Popup::init(m_width, m_height)) 
+            return false;
+
         m_layersInfo = layerInfo;
         setTitle(layerInfo.title);
 
@@ -22,9 +27,7 @@ protected:
         menu->setContentSize(m_mainLayer->getContentSize());
         m_mainLayer->addChildAtPosition(menu, Anchor::Center);
 
-        auto infoSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
-        infoSpr->setScale(0.75);
-        auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(SelectPopup::onInfoBtn));
+        auto infoBtn = InfoAlertButton::create("Help", "The list of named layers. Unnamed layers aren't here", 0.75);
         menu->addChildAtPosition(infoBtn, Anchor::TopRight, ccp(-18, -18));
 
         setupScrollLayer();
@@ -108,16 +111,10 @@ protected:
         onClose(nullptr);
     }
 
-
-    void onInfoBtn(CCObject*) {
-        createQuickPopup("Help", "The list of named layers. Unnamed layers aren't here", "ok", nullptr, nullptr);
-    } 
-
-
 public:
     static SelectPopup* create(LayersInfoReduced layer) {
         auto ret = new SelectPopup();
-        if (ret && ret->initAnchored(ret->m_width, ret->m_height, layer)) {
+        if (ret && ret->init(layer)) {
             ret->autorelease();
             return ret; 
         }

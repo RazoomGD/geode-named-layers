@@ -1,1 +1,1 @@
-Thanks for using my mod
+Thanks for using my mods!

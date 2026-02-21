@@ -1,11 +1,12 @@
 #include <Geode/Geode.hpp>
 #include <cvolton.level-id-api/include/EditorIDs.hpp>
+#include <razoom.save_level_data_api/include/SaveLevelDataApi.hpp>
 #include <Geode/modify/EditorPauseLayer.hpp>
 #include <Geode/modify/SetGroupIDLayer.hpp>
 #include <Geode/modify/GJGameLevel.hpp>
 #include <Geode/modify/EditorUI.hpp>
+#include <Geode/utils/general.hpp>
 #include <unordered_map>
-#include <unordered_set>
 #include <matjson.hpp>
 #include <matjson/std.hpp>
 #include <algorithm>
@@ -17,60 +18,11 @@ using namespace geode::prelude;
 #include "simpleSelectPopup.hpp"
 
 
-// keybinds
-#ifdef GEODE_IS_DESKTOP
-	#include <geode.custom-keybinds/include/Keybinds.hpp>
-	$execute {
-		keybinds::BindManager::get()->registerBindable({
-			"open-list"_spr, "Open layer list",
-			"Open the list of the used editor layers",
-			{ keybinds::Keybind::create(KEY_G, keybinds::Modifier::Control) },
-			"Named Editor Layers"
-		});
-		keybinds::BindManager::get()->registerBindable({
-			"change-layer-1"_spr, "Change layer 1",
-			"When in <cy>Edit Group</c> menu, open the layer list to select L1 layer",
-			{ keybinds::Keybind::create(KEY_G, keybinds::Modifier::Control) },
-			"Named Editor Layers"
-		});
-		keybinds::BindManager::get()->registerBindable({
-			"change-layer-2"_spr, "Change layer 2",
-			"When in <cy>Edit Group</c> menu, open the layer list to select L2 layer",
-			{ keybinds::Keybind::create(KEY_G, keybinds::Modifier::Control | keybinds::Modifier::Shift) },
-			"Named Editor Layers"
-		});
-	}
-#endif // GEODE_IS_DESKTOP
-
-
-
-struct MyEditorUI;
-struct MyEditorUI* myEditorUI;
-
-
 class $modify(MyEditorUI, EditorUI) {
 	struct Fields {
-
-		int levelId = 0;
 		std::unordered_map<int, std::string> layerNames;
 		Ref<CCLabelBMFont> layerNameLabel;
 		Ref<CCMenu> layerMenu;
-
-		void loadMap() {
-			if (auto res = matjson::parse(Mod::get()->getSavedValue<std::string>(std::to_string(levelId), "{}"))) {
-				for (auto& [key, value] : *res) {
-					if (value.isString()) layerNames.insert({std::atoi(key.c_str()), *value.asString()});
-				}
-			}
-		}
-
-		~Fields() {
-			matjson::Value jsonVal;
-			for (const auto& [key, value] : layerNames) {
-				jsonVal[std::to_string(key)] = value;
-			}
-			Mod::get()->setSavedValue(std::to_string(levelId), jsonVal.dump(matjson::NO_INDENTATION));
-		}
 	};
 
 	static void onModify(auto& self) {
@@ -123,17 +75,17 @@ class $modify(MyEditorUI, EditorUI) {
 		if (m_editorLayer->m_currentLayer == layer) return;
 		// layer changed
 		layer = m_editorLayer->m_currentLayer;
-		updateLayer(layer);
+		updateLayerText(layer);
 	}
 
 
-	void updateLayer(int layer) {
+	void updateLayerText(int layer) {
 		if (layer == -1) { // all
 			updateLabel("");
 		} else {
 			auto it = m_fields->layerNames.find(layer);
 			if (it != m_fields->layerNames.end()) {
-				updateLabel((*it).second.c_str());
+				updateLabel(it->second.c_str());
 			} else {
 				updateLabel(" - ");
 			}
@@ -161,28 +113,47 @@ class $modify(MyEditorUI, EditorUI) {
 
 
 	void initKeybinds() {
-		#ifdef GEODE_IS_DESKTOP
-			this->template addEventListener<keybinds::InvokeBindFilter>([this](keybinds::InvokeBindEvent* event) {
-				if (event->isDown()) {
-					if (CCScene::get()->getChildByID("set-name-popup"_spr) == nullptr && 
-								CCScene::get()->getChildByID("layer-list-popup"_spr)== nullptr &&
-								CCScene::get()->getChildByID("SetGroupIDLayer") == nullptr) {
-						onLayerListButton(nullptr);
-					}
+		addEventListener(KeybindSettingPressedEventV3(GEODE_MOD_ID, "open-list"), [this](const Keybind& keybind, bool down, bool repeat, double timestamp) {
+            if (down && !repeat) {
+                if (CCScene::get()->getChildByID("set-name-popup"_spr) == nullptr && 
+							CCScene::get()->getChildByID("layer-list-popup"_spr)== nullptr &&
+							CCScene::get()->getChildByID("SetGroupIDLayer") == nullptr) {
+					onLayerListButton(nullptr);
+					return ListenerResult::Stop;
 				}
-				return ListenerResult::Propagate;
-			}, "open-list"_spr);
-		#endif // GEODE_IS_DESKTOP
+            }
+			return ListenerResult::Propagate;
+        });
 	}
 
 
 	bool init(LevelEditorLayer* editor) {
-		if (!EditorUI::init(editor)) {
+		if (!EditorUI::init(editor))
 			return false;
+
+		auto f = m_fields.self();
+		int levelId = EditorIDs::getID(editor->m_level);
+
+		bool useObject = Mod::get()->getSettingValue<bool>("use-save-object");
+		auto layers = SaveLevelDataAPI::getSavedValue(editor->m_level, "layers", true, useObject);
+		if (layers.isOk() && (*layers).isObject()) {
+			for (auto& [key, value] : *layers) {
+				if (value.isString()) {
+					f->layerNames.insert({std::atoi(key.c_str()), *value.asString()});
+				}
+			}
 		}
-		myEditorUI = this;
-		m_fields->levelId = EditorIDs::getID(editor->m_level);
-		m_fields->loadMap();
+
+		// todo: deprecated, exists only to recover old saves
+		if (f->layerNames.empty()) {
+			if (auto res = matjson::parse(Mod::get()->getSavedValue<std::string>(std::to_string(levelId), "{}"))) {
+				for (auto& [key, value] : *res) {
+					if (value.isString()) {
+						f->layerNames.insert({std::atoi(key.c_str()), *value.asString()});
+					}
+				}
+			}
+		}
 		
 		if (getChildByID("editor-buttons-menu")->getScale() > 0.85) {
 			freeUpSomeSpace();
@@ -191,12 +162,8 @@ class $modify(MyEditorUI, EditorUI) {
 		setupLayerMenu();
 		initKeybinds();
 		
-		updateLayer(editor->m_currentLayer);
+		updateLayerText(editor->m_currentLayer);
 		schedule(schedule_selector(MyEditorUI::checkLayer), 0);
-
-		if (Mod::get()->getSettingValue<bool>("use-save-object")) {
-			handleSaveObject(2, false);
-		}
 
 		return true;
 	}
@@ -210,7 +177,7 @@ class $modify(MyEditorUI, EditorUI) {
 
 	void nameUpdated(int layer, const char* name) {
 		if (layer == -1) return;
-		if (*name == '\0') {
+		if (name == nullptr || *name == '\0') {
 			m_fields->layerNames.erase(layer);
 			if (m_editorLayer->m_currentLayer == layer) {
 				updateLabel(" - ");
@@ -231,12 +198,12 @@ class $modify(MyEditorUI, EditorUI) {
 		// layers with objects
 		for (auto* obj : CCArrayExt<GameObject*>(allObjects)) {
 			auto it = layerCountMap.find(obj->m_editorLayer);
-			if (it != layerCountMap.end()) (*it).second++;
+			if (it != layerCountMap.end()) it->second++;
 			else layerCountMap.insert({obj->m_editorLayer, 1});
 
 			if (obj->m_editorLayer2 != obj->m_editorLayer && obj->m_editorLayer2 > 0) {
 				it = layerCountMap.find(obj->m_editorLayer2);
-				if (it != layerCountMap.end()) (*it).second++;
+				if (it != layerCountMap.end()) it->second++;
 				else layerCountMap.insert({obj->m_editorLayer2, 1});						
 			}
 		}
@@ -260,63 +227,10 @@ class $modify(MyEditorUI, EditorUI) {
 		int layer = m_editorLayer->m_currentLayer;
 		if (layer == -1) return;
 		auto it = m_fields->layerNames.find(layer);
-		auto name = (it != m_fields->layerNames.end()) ? (*it).second : std::string("");
+		auto name = (it != m_fields->layerNames.end()) ? it->second : std::string();
 		SetNamePopup::create({layer, name,
 			[this] (int layer, const char* name) {nameUpdated(layer, name);}
 		})->show();
-	}
-
-
-	// action: 1 - save, 2 - load; create - if not exists; doesn't check mod settings
-	void handleSaveObject(int action, bool create) {
-
-		auto editor = LevelEditorLayer::get();
-		TextGameObject* mySaveObj = nullptr;
-
-		for (auto *obj : CCArrayExt<GameObject*>(editor->m_objects)) {
-			if (obj->m_objectID != 914) continue;
-			if (auto textObj = typeinfo_cast<TextGameObject*>(obj)) {
-				auto text = std::string(textObj->m_text);
-				if (text.starts_with("config\n"_spr)) {
-					mySaveObj = textObj;
-					break;
-				}
-			}
-		}
-
-		if (!mySaveObj) {
-			if (!create) return;
-			short tmp = editor->m_currentLayer;
-			editor->m_currentLayer = -1;
-			mySaveObj = static_cast<TextGameObject*>(editor->createObject(914, ccp(0,0), true));
-			editor->m_currentLayer = tmp;
-			editor->removeObjectFromSection(mySaveObj);
-			mySaveObj->updateTextObject("{}", false);
-		}
-
-		if (action == 1) { // save
-			matjson::Value jsonVal;
-			for (const auto& [key, value] : m_fields->layerNames) {
-				jsonVal[std::to_string(key)] = value;
-			}
-			auto saveStr = std::string("config\n"_spr) + jsonVal.dump();
-			mySaveObj->updateTextObject(saveStr, false);
-			mySaveObj->setPosition(ccp(-6324,-5817));
-		} 
-		
-		if (action == 2) { // load
-			auto text = std::string(mySaveObj->m_text);
-			auto len = std::strlen("config\n"_spr);
-			if (text.size() > len) {
-				if (auto res = matjson::parse(text.substr(len))) {
-					for (auto& [key, value] : *res) {
-						if (value.isString()) {
-							m_fields->layerNames.insert({std::atoi(key.c_str()), *value.asString()});
-						}
-					}
-				}
-			}
-		}
 	}
 };
 
@@ -331,9 +245,11 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 
 		bool isBetterEdit = false;
 		struct {
-			TextInput* inputL1;
-			TextInput* inputL2;
+			TextInput* inputL1{};
+			TextInput* inputL2{};
 			std::vector<GameObject*> objects;
+			CCNode* unmix1{};
+			CCNode* unmix2{};
 		} betterEdit;
 	};
 
@@ -345,25 +261,24 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 
 
 	void initKeybinds() {
-		#ifdef GEODE_IS_DESKTOP
-			this->template addEventListener<keybinds::InvokeBindFilter>([this](keybinds::InvokeBindEvent* event) {
-				if (event->isDown()) {
-					if (CCScene::get()->getChildByID("simple-select-popup"_spr) == nullptr && CCScene::get()->getChildByID("SetGroupIDLayer") != nullptr) {
-						onL1Click(nullptr);
-					}
+		addEventListener(KeybindSettingPressedEventV3(GEODE_MOD_ID, "change-layer-1"), [this](const Keybind& keybind, bool down, bool repeat, double timestamp) {
+            if (down && !repeat) {
+                if (CCScene::get()->getChildByID("simple-select-popup"_spr) == nullptr && CCScene::get()->getChildByID("SetGroupIDLayer") != nullptr) {
+					onL1Click(nullptr);
+					return ListenerResult::Stop;
 				}
-				return ListenerResult::Propagate;
-			}, "change-layer-1"_spr);
-
-			this->template addEventListener<keybinds::InvokeBindFilter>([this](keybinds::InvokeBindEvent* event) {
-				if (event->isDown()) {
-					if (CCScene::get()->getChildByID("simple-select-popup"_spr) == nullptr && CCScene::get()->getChildByID("SetGroupIDLayer") != nullptr) {
-						onL2Click(nullptr);
-					}
+            }
+			return ListenerResult::Propagate;
+        });
+		addEventListener(KeybindSettingPressedEventV3(GEODE_MOD_ID, "change-layer-2"), [this](const Keybind& keybind, bool down, bool repeat, double timestamp) {
+            if (down && !repeat) {
+                if (CCScene::get()->getChildByID("simple-select-popup"_spr) == nullptr && CCScene::get()->getChildByID("SetGroupIDLayer") != nullptr) {
+					onL2Click(nullptr);
+					return ListenerResult::Stop;
 				}
-				return ListenerResult::Propagate;
-			}, "change-layer-2"_spr);
-		#endif // GEODE_IS_DESKTOP
+            }
+			return ListenerResult::Propagate;
+        });
 	}
 	
 
@@ -378,10 +293,12 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 		auto menuL2 = m_mainLayer->getChildByID("editor-layer-2-menu");
 		if (!menuL1 || !menuL2) return true;
 
-		if (menuL1->getChildByID("hjfod.betteredit/unmix-button") != nullptr) {
+		if (menuL1->getChildByID("hjfod.betteredit/unmix-button")) {
 			m_fields->isBetterEdit = true;
 			m_fields->betterEdit.inputL1 = menuL1->getChildByType<TextInput>(0);
 			m_fields->betterEdit.inputL2 = menuL2->getChildByType<TextInput>(0);
+			m_fields->betterEdit.unmix1 = menuL1->getChildByID("hjfod.betteredit/unmix-button");
+			m_fields->betterEdit.unmix2 = menuL2->getChildByID("hjfod.betteredit/unmix-button");
 			if (obj) {
 				m_fields->betterEdit.objects.push_back(obj);
 			} else {
@@ -427,7 +344,7 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 		// with BetterEdit
 		auto str = m_fields->betterEdit.inputL1->getString();
 		if (str.empty() || !std::all_of(str.begin(), str.end(), ::isdigit)) return -1;
-		return std::stoi(str);
+		return utils::numFromString<int>(str).unwrapOr(-1);
 	}
 	
 	
@@ -438,7 +355,7 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 		// with BetterEdit
 		auto str = m_fields->betterEdit.inputL2->getString();
 		if (str.empty() || !std::all_of(str.begin(), str.end(), ::isdigit)) return -1;
-		return std::stoi(str);
+		return utils::numFromString<int>(str).unwrapOr(-1);
 	}
 
 
@@ -451,11 +368,6 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 			obj->m_editorLayer = value;
 		}
 		m_fields->betterEdit.inputL1->setString(std::to_string(value));
-		if (auto menu = m_mainLayer->getChildByID("editor-layer-menu")) {
-			if (auto btn = menu->getChildByID("hjfod.betteredit/unmix-button")) {
-				btn->setVisible(false);
-			}
-		}
 	}
 
 
@@ -468,11 +380,6 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 			obj->m_editorLayer2 = value;
 		}
 		m_fields->betterEdit.inputL2->setString(std::to_string(value));
-		if (auto menu = m_mainLayer->getChildByID("editor-layer-2-menu")) {
-			if (auto btn = menu->getChildByID("hjfod.betteredit/unmix-button")) {
-				btn->setVisible(false);
-			}
-		}
 	}
 
 
@@ -493,9 +400,10 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 	void updateLabelText(CCLabelBMFont* lab, int layer) {
 		const char* text = " - ";
 		if (layer != -1) {
-			auto it = myEditorUI->m_fields->layerNames.find(layer);
-			if (it != myEditorUI->m_fields->layerNames.end()) {
-				text = (*it).second.c_str();
+			auto editor = reinterpret_cast<MyEditorUI*>(EditorUI::get());
+			auto it = editor->m_fields->layerNames.find(layer);
+			if (it != editor->m_fields->layerNames.end()) {
+				text = it->second.c_str();
 			}
 		} else if (m_fields->isBetterEdit) {
 			text = "";
@@ -516,7 +424,7 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 	void onL1Click(CCObject*) {
 		SelectPopup::create({
 			"Select Layer 1",
-			&myEditorUI->m_fields->layerNames, 
+			&reinterpret_cast<MyEditorUI*>(EditorUI::get())->m_fields->layerNames, 
 			getL1Value(),
 			[this](int layer) {
 				setL1Value(layer);
@@ -528,7 +436,7 @@ class $modify(MySetGroupIDLayer, SetGroupIDLayer) {
 	void onL2Click(CCObject*) {
 		SelectPopup::create({
 			"Select Layer 2",
-			&myEditorUI->m_fields->layerNames, 
+			&reinterpret_cast<MyEditorUI*>(EditorUI::get())->m_fields->layerNames, 
 			getL2Value(),
 			[this](int layer) {
 				setL2Value(layer);
@@ -563,9 +471,13 @@ class $modify(GJGameLevel) {
 
 class $modify(EditorPauseLayer) {
 	void saveLevel() {
-		if (Mod::get()->getSettingValue<bool>("use-save-object")) {
-			static_cast<MyEditorUI*>(EditorUI::get())->handleSaveObject(1, true);
+		matjson::Value jsonVal;
+		auto editor = reinterpret_cast<MyEditorUI*>(EditorUI::get());
+		for (const auto& [key, value] : editor->m_fields->layerNames) {
+			jsonVal[std::to_string(key)] = value;
 		}
+		bool useObject = Mod::get()->getSettingValue<bool>("use-save-object");
+		SaveLevelDataAPI::setSavedValue(editor->m_editorLayer->m_level, "layers", jsonVal, true, useObject);
 		EditorPauseLayer::saveLevel();
 	}
 };

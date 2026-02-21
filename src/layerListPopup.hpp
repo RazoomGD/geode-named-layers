@@ -6,7 +6,7 @@ struct LayersInfo {
 };
 
 
-class LayerListPopup : public Popup<LayersInfo> {
+class LayerListPopup : public Popup {
 private:
     const float m_width = 380.f;
     const float m_height = 280.f;
@@ -14,7 +14,11 @@ private:
     LayersInfo m_layersInfo;
 
 protected:
-    bool setup(LayersInfo layerInfo) override {
+    bool init(LayersInfo layerInfo) {
+
+        if (!Popup::init(m_width, m_height))
+            return false;
+
         m_layersInfo = layerInfo;
         // m_closeBtn->setVisible(false);
         setTitle("Used Editor Layers");
@@ -23,9 +27,13 @@ protected:
         menu->setContentSize(m_mainLayer->getContentSize());
         m_mainLayer->addChildAtPosition(menu, Anchor::Center);
 
-        auto infoSpr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
-        infoSpr->setScale(0.75);
-        auto infoBtn = CCMenuItemSpriteExtra::create(infoSpr, this, menu_selector(LayerListPopup::onInfoBtn));
+        auto infoBtn = InfoAlertButton::create("Help", 
+            "This is a list of <cl>named layers</c> and <cl>unnamed layers with objects</c>.\n"
+            "Use the <cy>lock</c> button to lock/unlock the layer.\n"
+            "Use the <cy>plus</c> button to change layer name.\n"
+            "Use the <cy>go to layer</c> button to jump to that layer.\n"
+            "<cg>You can also change the name of the layer by CLICKING ON "
+            "ITS TEXT directly in the editor!</c>", 0.75);
         menu->addChildAtPosition(infoBtn, Anchor::TopRight, ccp(-18, -18));
 
         setupScrollLayer();
@@ -58,7 +66,7 @@ protected:
             cell->addChildAtPosition(indexLab, Anchor::Left, ccp(10, 0));
 
             auto it = m_layersInfo.m_layerNames->find(layer);
-            auto name = (it != m_layersInfo.m_layerNames->end()) ? (*it).second : std::string("");
+            auto name = (it != m_layersInfo.m_layerNames->end()) ? it->second : std::string("");
             auto nameLab = CCLabelBMFont::create((name == "") ? "-" : name.c_str(), "bigFont.fnt");
             nameLab->setAnchorPoint({0,0.5});
             nameLab->limitLabelWidth(150, 0.5, 0);
@@ -133,7 +141,7 @@ protected:
         auto lab = static_cast<CCLabelBMFont*>(static_cast<CCNode*>(sender)->getUserObject());
         int layer = sender->getTag();
         auto it = m_layersInfo.m_layerNames->find(layer);
-        auto name = (it != m_layersInfo.m_layerNames->end()) ? (*it).second : std::string("");
+        auto name = (it != m_layersInfo.m_layerNames->end()) ? it->second : std::string("");
         SetNamePopup::create({
             layer, name,
             [this, lab] (int layer, const char* name) {
@@ -162,7 +170,7 @@ protected:
 public:
     static LayerListPopup* create(LayersInfo layer) {
         auto ret = new LayerListPopup();
-        if (ret && ret->initAnchored(ret->m_width, ret->m_height, layer)) {
+        if (ret && ret->init(layer)) {
             ret->autorelease();
             return ret; 
         }
@@ -173,18 +181,6 @@ public:
 
     void onClose(CCObject* sender) override {
         Popup::onClose(sender);
-    }
-
-
-    void onInfoBtn(CCObject*) {
-        createQuickPopup("Help", 
-            "This is a list of <cl>named layers</c> and <cl>unnamed layers with objects</c>.\n"
-            "Use the <cy>lock</c> button to lock/unlock the layer.\n"
-            "Use the <cy>plus</c> button to change layer name.\n"
-            "Use the <cy>go to layer</c> button to jump to that layer.\n"
-            "<cg>You can also change the name of the layer by CLICKING ON "
-            "ITS TEXT directly in the editor!</c>", "ok", nullptr, nullptr, true
-        );
     }
 };
     

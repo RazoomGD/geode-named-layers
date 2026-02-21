@@ -1,14 +1,14 @@
 {
-	"geode": "4.4.0",
+	"geode": "5.0.0-beta.3",
 	"gd": {
-		"win": "2.2074",
-		"android": "2.2074",
-		"mac": "2.2074",
-		"ios": "2.2074"
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081",
+		"ios": "2.2081"
 	},
 	"id": "razoom.named_editor_layers",
 	"name": "Named Editor Layers",
-	"version": "v1.1.0",
+	"version": "v1.2.0",
 	"developer": "RaZooM",
 	"description": "Adds names for the editor layers",
 
@@ -20,22 +20,13 @@
 	},
 
 	"dependencies": {
-		"geode.node-ids": {
-			"importance": "required",
-			"version": ">=1.17.0"
-		},
-		"cvolton.level-id-api": {
-			"importance": "required",
-			"version": ">=1.0.0"
-		},
-		"geode.custom-keybinds": {
-			"importance": "required",
-			"version": ">=v1.10.0",
-			"platforms": ["win", "mac", "mac-intel", "mac-arm"]
-		}
+		"geode.node-ids": ">=1.22.0",
+		"cvolton.level-id-api": ">=2.0.0",
+		"razoom.save_level_data_api": ">=1.0.5"
 	},
 
 	"settings": {
+
 		"in-edit-groups-menu": {
 			"name": "Layer names in 'Edit Group' menu",
 			"description": "Show layer names in 'Edit Group' menu. You can also <cj>click</c> on the name text to select the layer",
@@ -47,6 +38,32 @@
 			"description": "Store layer names in a special text object in the level. This allows you to share layer names when sharing/publishing a level\n(this text object is located far to the left in editor an updated automatically with level save)",
 			"type": "bool",
 			"default": false
+		},
+
+		"keybinds-title": {
+			"type": "title",
+			"name": "Keybinds"
+		},
+		"open-list": {
+			"type": "keybind",
+			"name": "Open layer list",
+			"description": "Open the list of the used editor layers",
+			"default": "Ctrl+G",
+			"category": "editor"
+		},
+		"change-layer-1": {
+			"type": "keybind",
+			"name": "Change layer 1",
+			"description": "When in <cy>Edit Group</c> menu, open the layer list to select L1 layer",
+			"default": "Ctrl+G",
+			"category": "editor"
+		},
+		"change-layer-2": {
+			"type": "keybind",
+			"name": "Change layer 2",
+			"description": "When in <cy>Edit Group</c> menu, open the layer list to select L2 layer",
+			"default": "Ctrl+Shift+G",
+			"category": "editor"
 		}
 	}
 }
